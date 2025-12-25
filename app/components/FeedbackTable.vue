@@ -1,16 +1,21 @@
 <template>
-  <UTable :data="data" :columns="columns" class="flex-1" />
+  <UTable
+    :data="data"
+    :columns="columns"
+    v-model:column-visibility="columnVisibility"
+    class="flex-1 border border-gray-300 bg-gray-100/40 rounded-xl shadow"
+  />
 </template>
 <script setup lang="ts">
 import { h, resolveComponent } from "vue";
 import type { TableColumn } from "@nuxt/ui";
-import type { Row } from "@tanstack/vue-table";
 import { useClipboard } from "@vueuse/core";
 
 const props = defineProps<{
   dataSource: Record<string, unknown>[] | undefined;
   isLoading: boolean;
 }>();
+const emit = defineEmits(["deleteFeedback", "click:editFeedback"]);
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
@@ -30,8 +35,16 @@ type TFeedback = {
 };
 
 const data = computed(() => props.dataSource as TFeedback[]);
+const isDeletingFeedback = ref(false);
+const feedbackIdToDelete = ref();
+const columnVisibility = ref({
+  id: false,
+});
 
 const columns: TableColumn<TFeedback>[] = [
+  {
+    accessorKey: "id",
+  },
   {
     accessorKey: "number",
     header: "#",
@@ -51,9 +64,27 @@ const columns: TableColumn<TFeedback>[] = [
   },
   {
     accessorKey: "createdAt",
-    header: "Tanggal",
+    header: "Dibuat",
     cell: ({ row }) =>
-      new Date(row.getValue("createdAt")).toLocaleDateString("id-ID"),
+      new Date(row.getValue("createdAt")).toLocaleString("id-ID"),
+  },
+  {
+    accessorKey: "updatedAt",
+    header: "Diperbarui",
+    cell: ({ row }) => {
+      const createdAt = new Date(row.getValue("createdAt")).toLocaleString(
+        "id-ID"
+      );
+      const updatedAt = new Date(row.getValue("updatedAt")).toLocaleString(
+        "id-ID"
+      );
+      console.log(createdAt, updatedAt);
+      if (createdAt === updatedAt) {
+        return "Belum ada pembaruan";
+      } else {
+        return new Date(row.getValue("updatedAt")).toLocaleString("id-ID");
+      }
+    },
   },
   {
     id: "actions",
@@ -63,68 +94,53 @@ const columns: TableColumn<TFeedback>[] = [
           icon: "lucide:trash-2",
           variant: "soft",
           class: "border border-primary",
-          size:"sm"
+          size: "sm",
+          disabled: isDeletingFeedback.value,
+          loading:
+            isDeletingFeedback.value &&
+            feedbackIdToDelete.value === row.getValue("id"),
+          onClick: () => {
+            deleteFeedback(row.getValue("id"));
+          },
         }),
         h(UButton, {
           icon: "lucide:pen",
           variant: "soft",
           class: "border border-primary",
-          size:"sm"
+          size: "sm",
+          onClick: () => {
+            emit("click:editFeedback", row.original);
+          },
         }),
       ]);
     },
   },
 ];
 
-function getRowItems(row: Row<TFeedback>) {
-  return [
-    {
-      type: "label",
-      label: "Actions",
-    },
-    {
-      label: "Copy payment ID",
-      onSelect() {
-        copy(row.original.id);
-
-        toast.add({
-          title: "Payment ID copied to clipboard!",
-          color: "success",
-          icon: "i-lucide-circle-check",
-        });
-      },
-    },
-    {
-      type: "separator",
-    },
-    {
-      label: "View customer",
-    },
-    {
-      label: "View payment details",
-    },
-  ];
-}
+const deleteFeedback = async (id: string) => {
+  try {
+    isDeletingFeedback.value = true;
+    feedbackIdToDelete.value = id;
+    const res = await $fetch(`/api/feedback`, {
+      method: "DELETE",
+      query: { id },
+    });
+    if (res.success) {
+      toast.add({
+        title: "Success",
+        description: "Feedback has been deleted.",
+        color: "primary",
+      });
+      emit("deleteFeedback", id);
+    }
+  } catch (err) {
+    toast.add({
+      title: "Error",
+      description: "Something went wrong.",
+      color: "error",
+    });
+  } finally {
+    isDeletingFeedback.value = false;
+  }
+};
 </script>
-
-<!-- <template>
-  <UTable
-    :data="dataSource"
-    :loading="isLoading"
-    v-model:column-visibility="columnVisibility"
-    class="flex-1"
-  >
-    <template #column-actions="{ row }"> console.log(row) </template>
-  </UTable>
-</template>
-
-<script lang="ts" setup>
-const props = defineProps<{
-  dataSource: Record<string, unknown>[] | undefined;
-  isLoading: boolean;
-}>();
-const columnVisibility = ref({
-  id: false,
-  updated_at: false,
-});
-</script> -->

@@ -4,9 +4,9 @@ export default defineEventHandler(async (event) => {
   // ambil body dari request
   const body = await readBody(event);
 
-  const { name, email, rating, message, status = "pending" } = body;
+  const { name, email, message } = body;
 
-  if (!name || !email || !rating || !message) {
+  if (!name || !email || !message) {
     throw createError({
       statusCode: 400,
       statusMessage: "Missing required fields",
@@ -16,11 +16,11 @@ export default defineEventHandler(async (event) => {
   const [result] = await db.execute(
     `
     INSERT INTO customer_feedback
-      (name, email, rating, message, status, created_at, updated_at)
+      (name, email, message, created_at, updated_at)
     VALUES
-      (?, ?, ?, ?, ?, NOW(), NOW())
+      (?, ?, ?, NOW(), NOW())
     `,
-    [name, email, rating, message, status]
+    [name, email, message]
   );
 
   return {

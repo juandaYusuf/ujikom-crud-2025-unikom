@@ -13,5 +13,15 @@ export default defineAppConfig({
         ],
       },
     },
+    textarea: {
+      slots: {
+        base: ["font-mono"],
+      },
+    },
+    input: {
+      slots: {
+        base: ["font-mono"],
+      },
+    },
   },
 });

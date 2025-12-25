@@ -55,7 +55,11 @@
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
+import { id } from "zod/locales";
 
+const props = defineProps<{
+  data: Record<string, any> | undefined;
+}>();
 const emit = defineEmits(["submit"]);
 const schema = z.object({
   name: z.string("Nama wajib diisi").min(2, "Setidaknya 2 karakter"),
@@ -63,21 +67,23 @@ const schema = z.object({
   message: z.string("Pesan wajib diisi").min(10, "Setidaknya 10 karakter"),
 });
 const state = reactive<Partial<z.output<typeof schema>>>({
-  name: undefined,
-  email: undefined,
-  message: undefined,
+  name: props.data?.name,
+  email: props.data?.email,
+  message: props.data?.message,
 });
 const toast = useToast();
 
 async function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
+  console.log(props.data?.id,)
   try {
     const reqBody = {
+      id: props.data?.id,
       name: event.data.name,
       email: event.data.email,
       message: event.data.message,
     };
     const res = await $fetch("/api/feedback", {
-      method: "POST",
+      method: "PUT",
       body: reqBody,
     });
 

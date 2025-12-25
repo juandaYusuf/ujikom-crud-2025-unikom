@@ -18,27 +18,58 @@
         class="w-full overflow-hidden transition-all duration-300 rounded-xl"
         :class="[
           isExpandForm
-            ? 'h-80 opacity-100 shadow bg-gray-100/40 border border-gray-300'
+            ? 'h-72 opacity-100 shadow bg-gray-100/40 border border-gray-300'
             : 'h-0 opacity-0',
         ]"
       >
         <div class="px-4 py-2 flex flex-col" v-if="shouldBeMountedForm">
           <p class="font-bold opacity-70 mb-4">Kirim Feedback</p>
-          <FeedbackForm />
+          <FeedbackForm @submit="submitHandler" />
         </div>
       </div>
 
       <FeedbackTable
+        @deleteFeedback="deleteFeedbackHandler"
+        @click:editFeedback="editFeedbackHandler"
         :dataSource="feedbackTableData"
         :isLoading="feedbackStatus === 'pending'"
       />
     </div>
+    <UModal
+      title="Modal with close button"
+      close-icon="i-lucide-arrow-right"
+      v-model:open="isOpenEditModal"
+    >
+      <template #content>
+        <div class="p-4 pb-6">
+          <div
+            class="flex items-center justify-between mb-4 pb-2 border-b border-gray-300"
+          >
+            <p class="font-bold">Edit Feedback</p>
+            <UButton
+              @click="isOpenEditModal = false"
+              variant="link"
+              size="xl"
+              icon="lucide:circle-x"
+              class="shadow-none"
+            />
+          </div>
+          <FeedbackEditForm
+            :data="feedbackEditableData"
+            @submit="submitHandler"
+          />
+        </div>
+      </template>
+    </UModal>
   </UContainer>
 </template>
 
 <script setup lang="ts">
-// Untuk get semua data
-const { data: feedback, status: feedbackStatus } = useAsyncData(
+const {
+  data: feedback,
+  status: feedbackStatus,
+  refresh: refreshFeedback,
+} = useAsyncData(
   "feedback",
   () =>
     $fetch("/api/feedback", {
@@ -49,7 +80,9 @@ const { data: feedback, status: feedbackStatus } = useAsyncData(
     lazy: true,
   }
 );
+const isOpenEditModal = ref(false);
 const isExpandForm = ref(false);
+const feedbackEditableData = ref<Record<string, any>>();
 const shouldBeMountedForm = ref(false);
 const shouldBeRemoveClickAbleEvent = ref(false);
 const feedbackTableData = computed(() => {
@@ -84,5 +117,23 @@ const expandableFormHandler = () => {
     });
     isExpandForm.value = true;
   }
+};
+
+const submitHandler = () => {
+  refreshFeedback();
+  isExpandForm.value = false;
+  setTimeout(() => {
+    shouldBeMountedForm.value = false;
+    shouldBeRemoveClickAbleEvent.value = false;
+  }, 500);
+  isOpenEditModal.value = false;
+};
+const editFeedbackHandler = (e: any) => {
+  isOpenEditModal.value = true;
+  feedbackEditableData.value = e;
+};
+
+const deleteFeedbackHandler = (id: string) => {
+  refreshFeedback();
 };
 </script>
